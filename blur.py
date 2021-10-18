@@ -1,6 +1,8 @@
 import cv2
 import numpy as np
 
+from utils import save_images
+
 
 def get_gaussian_kernel(x_size, y_size, sigma):
     x = range(-(x_size - 1) // 2, (x_size - 1) // 2 + 1)
@@ -49,9 +51,12 @@ def difference_of_images(first_image, second_image):
 def compute_octave(image, sigma, k, rounds=5, first_round=1):
     gaussians = []
     for i in range(first_round, rounds + first_round):
+        print(f"Blur #{i - first_round + 1}")
         sigma_k = sigma * (k ** i)
         blurred = gaussian_filter(image, sigma_k)
         gaussians.append(blurred)
+
+    save_images(gaussians, f"image_{first_round}")
     differences = []
     for i in range(1, len(gaussians)):
         differences.append(difference_of_images(gaussians[i], gaussians[i-1]))
@@ -59,23 +64,23 @@ def compute_octave(image, sigma, k, rounds=5, first_round=1):
     return differences
 
 
-def generate_octaves_tree(image, sigma, k):
-    octaves_number = 5  # TODO compute the real number of octaves
+def generate_octave_pyramid(image, sigma, k):
+    octaves_number = int(round(np.log2(np.min(image.shape)) - 1))
+    octave_results = []
     for i in range(1, octaves_number):
+        print(f"Pyramid #{i}, shape={image.shape}")
         differences = compute_octave(image, sigma, k, first_round=i)
+        octave_results.append(differences)
+        # TODO change resize to the own function
+        image = cv2.resize(image, dsize=(image.shape[1] // 2, image.shape[0] // 2), interpolation=cv2.INTER_LINEAR)
+    return octave_results
 
 
 def main():
     image = cv2.imread("image.jpeg", 0)
-
-    blured = cv2.GaussianBlur(image, (7, 7), 0)
-    cv2.imshow('Gaussian Blurring', blured)
-
-    blured = gaussian_filter(image, 1)
-    cv2.imshow('My Gaussian Blurring', blured)
-
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+    sigma = 1
+    k = np.sqrt(2)
+    generate_octave_pyramid(image, sigma, k)
 
 
 if __name__ == "__main__":
