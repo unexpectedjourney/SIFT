@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 
-from utils import save_images
+from utils import save_images, resize_by_2
 
 
 def get_gaussian_kernel(x_size, y_size, sigma):
@@ -36,7 +36,7 @@ def conv2d(image, weight):
 
 
 def gaussian_filter(image, sigma, truncate=4.):
-    width = int(sigma * truncate + 0.5) + 1  # TODO check implmentation
+    width = int(sigma * truncate + 0.5) + 1  # TODO check implementation
     if width % 2 == 0:
         width += 1
     kernel = get_gaussian_kernel(width, width, sigma)
@@ -71,8 +71,7 @@ def generate_octave_pyramid(image, sigma, k):
         print(f"Pyramid #{i}, shape={image.shape}")
         differences = compute_octave(image, sigma, k, first_round=i)
         octave_results.append(differences)
-        # TODO change resize to the own function
-        image = cv2.resize(image, dsize=(image.shape[1] // 2, image.shape[0] // 2), interpolation=cv2.INTER_LINEAR)
+        image = resize_by_2(image)
     return octave_results
 
 
