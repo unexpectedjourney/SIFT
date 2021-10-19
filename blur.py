@@ -8,7 +8,7 @@ def get_gaussian_kernel(x_size, y_size, sigma):
     x = range(-(x_size - 1) // 2, (x_size - 1) // 2 + 1)
     y = range(-(y_size - 1) // 2, (y_size - 1) // 2 + 1)
     m1, m2 = np.meshgrid(x, y)
-    kernel = np.exp(-(m1**2 + m2**2) / (2 * sigma**2))
+    kernel = np.exp(-(m1**2 + m2**2) / (2 * sigma**2)) / (2 * np.pi * sigma**2)
     kernel = kernel / np.sum(kernel)
     return kernel
 
@@ -35,10 +35,8 @@ def conv2d(image, weight):
     return output
 
 
-def gaussian_filter(image, sigma, truncate=4.):
-    width = int(sigma * truncate + 0.5) + 1  # TODO check implementation
-    if width % 2 == 0:
-        width += 1
+def gaussian_filter(image, sigma, truncate=3.):
+    width = int(sigma * truncate + 0.5) + 1
     kernel = get_gaussian_kernel(width, width, sigma)
     output = conv2d(image, kernel)
     return output
