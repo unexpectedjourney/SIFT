@@ -1,6 +1,8 @@
 import numpy as np
 import numpy.linalg as la
 
+from utils import show_points
+
 
 def is_extremum(value, layer_one, layer_two, layer_three, threshold):
     t = np.floor(0.5 * threshold / 3 * 255)
@@ -74,6 +76,7 @@ def find_extremum(octaves, sigma, k, contrast_threshold=0.4, edge_threshold=10):
     contrast_keypoints = 0
     harris_keypoints = 0
     for octave_number, layers in enumerate(octaves):
+        local_keypoints = []
         for position in range(1, len(layers) - 1):
             for i in range(1, layers[position].shape[0] - 1):
                 for j in range(1, layers[position].shape[1] - 1):
@@ -110,7 +113,9 @@ def find_extremum(octaves, sigma, k, contrast_threshold=0.4, edge_threshold=10):
                     if edge_value > edge_threshold:
                         continue
                     harris_keypoints += 1
-
-                    keypoints.append((i, j, position, octave_number))
+                    keypoint = np.array([i, j, position]) + x_hat
+                    local_keypoints.append(keypoint)
+        show_points(layers, local_keypoints, octave_number)
+        keypoints.extend(local_keypoints)
     print(initial_keypoints, contrast_keypoints, harris_keypoints)
     return keypoints
