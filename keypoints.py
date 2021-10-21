@@ -21,7 +21,7 @@ def compute_jacobian(layers, position, x, y):
     d_x = float(layers[position][x + 1, y] - layers[position][x - 1, y]) / 2
     d_y = float(layers[position][x, y + 1] - layers[position][x, y - 1]) / 2
     d_sigma = float(layers[position + 1][x, y] - layers[position - 1][x, y]) / 2
-    return np.array((d_x, d_y, d_sigma))
+    return np.array([d_x, d_y, d_sigma])
 
 
 def compute_hessian(layers, position, x, y):
@@ -52,12 +52,33 @@ def compute_hessian(layers, position, x, y):
     return matrix
 
 
-def compute_subpixel(layers, position, x, y):
-    jacobian = compute_jacobian(layers, position, x, y)
-    hessian = compute_hessian(layers, position, x, y)
-    x_hat = -la.inv(hessian) @ jacobian
+def clip_values(keypoint, layers):
+    pp = int(np.round(keypoint[2]))
+    pp = np.clip(pp, 1, len(layers) - 2)
+    xx = int(np.round(keypoint[0]))
+    xx = np.clip(xx, 1, layers[0].shape[0] - 2)
+    yy = int(np.round(keypoint[1]))
+    yy = np.clip(yy, 1, layers[0].shape[1] - 2)
+    new_kp = np.array([xx, yy, pp], dtype=float)
+    return new_kp
 
-    return x_hat, hessian, jacobian
+
+def compute_subpixel(layers, position, x, y, n_iter=5):
+    is_done = False
+    keypoint = np.array([x, y, position], dtype=np.float)
+    for _ in range(n_iter):
+        xx, yy, pp = map(int, keypoint)
+        jacobian = compute_jacobian(layers, pp, xx, yy)
+        hessian = compute_hessian(layers, pp, xx, yy)
+        x_hat = -la.inv(hessian) @ jacobian
+        keypoint += x_hat
+
+        keypoint = clip_values(keypoint, layers)
+        if np.all(np.abs(x_hat) < 0.5):
+            is_done = True
+            break
+    keypoint = keypoint.astype(int)
+    return keypoint, x_hat, hessian, jacobian, is_done
 
 
 def get_contrast(value, x_hat, jacobian):
@@ -92,16 +113,24 @@ def find_extremum(octaves, sigma, k, contrast_threshold=0.4, edge_threshold=10):
                     initial_keypoints += 1
 
                     try:
-                        x_hat, hessian, jacobian = compute_subpixel(
+                        keypoint, x_hat, hessian, jacobian, is_done = compute_subpixel(
                             layers,
                             position,
                             i,
                             j
                         )
-                    except la.LinAlgError:
+                    except la.LinAlgError as e:
+                        print(e)
                         continue
+
+                    if not is_done:
+                        continue
+
+                    x = keypoint[0]
+                    y = keypoint[1]
+                    p = keypoint[2]
                     contrast = get_contrast(
-                        layers[position][i, j],
+                        layers[p][x, y],
                         x_hat,
                         jacobian
                     )
@@ -113,7 +142,6 @@ def find_extremum(octaves, sigma, k, contrast_threshold=0.4, edge_threshold=10):
                     if edge_value > edge_threshold:
                         continue
                     harris_keypoints += 1
-                    keypoint = np.array([i, j, position]) + x_hat
                     local_keypoints.append(keypoint)
         show_points(layers, local_keypoints, octave_number)
         keypoints.extend(local_keypoints)
