@@ -4,10 +4,7 @@ import numpy.linalg as la
 from utils import show_points
 
 
-def is_extremum(value, layer_one, layer_two, layer_three, threshold):
-    t = np.floor(0.5 * threshold / 3 * 255)
-    if abs(value) < t:
-        return False
+def is_extremum(value, layer_one, layer_two, layer_three):
     if value > 0 and np.all(layer_one <= value) and \
             np.all(layer_two <= value) and np.all(layer_three <= value):
         return True
@@ -106,7 +103,6 @@ def find_extremum(octaves, sigma, k, contrast_threshold=0.4, edge_threshold=10):
                         layers[position - 1][i-1:i+2, j-1:j+2],
                         layers[position][i-1:i+2, j-1:j+2],
                         layers[position + 1][i-1:i+2, j-1:j+2],
-                        contrast_threshold,
                     )
                     if not is_suitable:
                         continue
@@ -120,7 +116,6 @@ def find_extremum(octaves, sigma, k, contrast_threshold=0.4, edge_threshold=10):
                             j
                         )
                     except la.LinAlgError as e:
-                        print(e)
                         continue
 
                     if not is_done:
@@ -142,8 +137,10 @@ def find_extremum(octaves, sigma, k, contrast_threshold=0.4, edge_threshold=10):
                     if edge_value > edge_threshold:
                         continue
                     harris_keypoints += 1
+                    keypoint[0] = keypoint[0] * 2**octave_number
+                    keypoint[1] = keypoint[1] * 2**octave_number
                     local_keypoints.append(keypoint)
-        show_points(layers, local_keypoints, octave_number)
         keypoints.extend(local_keypoints)
+    show_points(layers, keypoints)
     print(initial_keypoints, contrast_keypoints, harris_keypoints)
     return keypoints
