@@ -49,18 +49,20 @@ def compute_octave(image, sigma, k, rounds=5, first_round=1):
     for i in range(1, len(gaussians)):
         differences.append(difference_of_images(gaussians[i], gaussians[i-1]))
 
-    return differences
+    return gaussians, differences
 
 
 def generate_octave_pyramid(image, sigma, k):
     octaves_number = int(round(np.log2(np.min(image.shape)) - 1))
-    octave_results = []
+    octave_gaussians = []
+    octave_differences = []
     for i in range(1, octaves_number):
         print(f"Pyramid #{i}, shape={image.shape}")
-        differences = compute_octave(image, sigma, k, first_round=i)
-        octave_results.append(differences)
+        gaussians, differences = compute_octave(image, sigma, k, first_round=i)
+        octave_gaussians.append(gaussians)
+        octave_differences.append(differences)
         image = resize_by_2(image)
-    return octave_results
+    return octave_gaussians, octave_differences
 
 
 def main():

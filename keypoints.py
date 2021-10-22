@@ -2,6 +2,7 @@ import numpy as np
 import numpy.linalg as la
 
 from utils import show_points
+from blur import get_gaussian_kernel
 
 
 def is_extremum(value, layer_one, layer_two, layer_three):
@@ -88,12 +89,79 @@ def get_harris_value(hessian):
     return a / b if b != 0 else 0
 
 
-def find_extremum(octaves, sigma, k, contrast_threshold=0.4, edge_threshold=10):
+def get_m_theta(image, x, y):
+    x_p = np.clip(x+1, 0, image.shape[0]-1)
+    x_m = np.clip(x-1, 0, image.shape[0]-1)
+    y_p = np.clip(y+1, 0, image.shape[1]-1)
+    y_m = np.clip(y-1, 0, image.shape[1]-1)
+
+    d_x = image[x_p, y] - image[x_m, y]
+    d_y = image[x, y_p] - image[x, y_m]
+    m = np.sqrt(d_x ** 2 + d_y ** 2)
+    theta = np.arctan2(d_x, d_y)
+    return m, theta
+
+
+def fit_parabola(hist, index, width):
+    center_point = index * width + width // 2
+    right_point = ((index+1) * width + width // 2) % 360
+    left_point = (360 + (index-1) * width + width // 2) % 360
+
+    A = np.array([
+        [center_point**2, center_point, 1],
+        [right_point**2, right_point, 1],
+        [left_point**2, left_point, 1]])
+    b = np.array([
+        hist[index],
+        hist[(index+1) % hist.shape[0]],
+        hist[(index-1) % hist.shape[0]]])
+    x = la.lstsq(A, b, rcond=None)[0]
+
+    value = -x[1] / (2*x[0] + 1e6)
+    return value
+
+
+def get_oriented_keypoints(keypoints, images, differences, bins=36):
+    new_points = []
+    bin_width = 360 // bins
+
+    for point in keypoints:
+        x, y, p, o = point
+        sigma = p * 1.5
+        width = 2 * int(round(sigma)) + 1
+        if width % 2 == 0:
+            width += 1
+
+        kernel = get_gaussian_kernel(width, width, sigma)
+        image = images[o][p]
+        hist = np.zeros(bins, dtype=float)
+        for i in range(-width // 2, width // 2 + 1):
+            for j in range(-width // 2, width // 2 + 1):
+                xx = np.clip(x + i, 1, image.shape[0] - 2)
+                yy = np.clip(y + j, 1, image.shape[1] - 2)
+
+                m, theta = get_m_theta(image, xx, yy)
+                weight = kernel[i + width // 2, j + width // 2] * m
+                bin = int(np.floor(theta) // bin_width)
+
+                hist[bin] += weight
+        max_bin = np.argmax(hist)
+        max_value = hist[max_bin]
+        new_points.append(np.array([*point, fit_parabola(hist, max_bin, bin_width)]))
+
+        for i, value in enumerate(hist):
+            if .8 * max_value <= value and i != max_bin:
+                new_points.append(np.array([*point, fit_parabola(hist, i, bin_width)]))
+
+    return np.array(new_points)
+
+
+def find_extremum(difference_octaves, sigma, k, contrast_threshold=0.4, edge_threshold=10):
     keypoints = []
     initial_keypoints = 0
     contrast_keypoints = 0
     harris_keypoints = 0
-    for octave_number, layers in enumerate(octaves):
+    for octave_number, layers in enumerate(difference_octaves):
         local_keypoints = []
         for position in range(1, len(layers) - 1):
             for i in range(1, layers[position].shape[0] - 1):
@@ -139,6 +207,7 @@ def find_extremum(octaves, sigma, k, contrast_threshold=0.4, edge_threshold=10):
                     harris_keypoints += 1
                     keypoint[0] = keypoint[0] * 2**octave_number
                     keypoint[1] = keypoint[1] * 2**octave_number
+                    keypoint = np.array([*keypoint, octave_number])
                     local_keypoints.append(keypoint)
         keypoints.extend(local_keypoints)
     show_points(layers, keypoints)
