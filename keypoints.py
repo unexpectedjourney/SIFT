@@ -117,7 +117,7 @@ def fit_parabola(hist, index, width):
         hist[(index-1) % hist.shape[0]]])
     x = la.lstsq(A, b, rcond=None)[0]
 
-    value = -x[1] / (2*x[0] + 1e6)
+    value = -x[1] / (2*x[0] + 1e-6)
     return value
 
 

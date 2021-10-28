@@ -3,6 +3,7 @@ import numpy as np
 
 from blur import generate_octave_pyramid
 from keypoints import find_extremum, get_oriented_keypoints
+from descriptor import get_local_descriptors
 
 
 def main():
@@ -17,6 +18,7 @@ def main():
         octave_differences
     )
     print(len(keypoints))
+    get_local_descriptors(keypoints, octave_gaussians, octave_differences)
 
 
 if __name__ == "__main__":
