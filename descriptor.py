@@ -42,51 +42,63 @@ def normalize_vector(vector):
     return vector
 
 
-def get_local_descriptors(
-        keypoints,
-        images,
-        differences,
+def compute_patch(
+        patch,
+        angle,
         width=16,
         regions=4,
         bins=8
 ):
-    bin_width = 360 // width
+    if not np.min(patch.shape):
+        return None
+    bin_width = 360 // bins
+    features = np.zeros(bins*regions*regions)
+    dx = np.gradient(patch, axis=0)
+    dy = np.gradient(patch, axis=1)
+
+    m, theta = get_m_theta(dx, dy)
+
+    region_width = width // regions
+
+    for i in range(regions):
+        for j in range(regions):
+            x1 = i * region_width
+            y1 = j * region_width
+            x2 = min(patch.shape[0], (i + 1) * region_width)
+            y2 = min(patch.shape[1], (j + 1) * region_width)
+            hist = get_region_hist(
+                m[x1:x2, y1:y2],
+                theta[x1:x2, y1:y2],
+                bins,
+                bin_width,
+                angle,
+                region_width
+            )
+            from_point = (i * regions + j) * bins
+            to_point = (i * regions + j + 1) * bins
+            features[from_point:to_point] = hist
+    features = normalize_vector(features)
+    features[features > 0.2] = 0.2
+    features = normalize_vector(features)
+    return features
+
+
+def get_local_descriptors(
+        keypoints,
+        images,
+        width=16,
+        regions=4,
+        bins=8
+):
     descriptors = []
     for point in keypoints:
         x, y, p, o = list(map(int, point[:4]))
         angle = point[4]
         image = images[o][p]
 
-        features = np.zeros(bins*regions*regions)
         patch = get_patch(image, width, x, y)
-        if not np.min(patch.shape):
+        features = compute_patch(patch, angle=angle)
+        if features is None:
             continue
-        dx = np.gradient(patch, axis=0)
-        dy = np.gradient(patch, axis=1)
-
-        m, theta = get_m_theta(dx, dy)
-
-        region_width = width // regions
-
-        for i in range(regions):
-            for j in range(regions):
-                x1 = i * region_width
-                y1 = j * region_width
-                x2 = min(image.shape[0], (i + 1) * region_width)
-                y2 = min(image.shape[1], (j + 1) * region_width)
-                hist = get_region_hist(
-                    m[x1:x2, y1:y2],
-                    theta[x1:x2, y1:y2],
-                    bins,
-                    bin_width,
-                    angle,
-                    region_width
-                )
-                from_point = (i * regions + j) * bins
-                to_point = (i * regions + j + 1) * bins
-                features[from_point:to_point] = hist
-        features = normalize_vector(features)
-        features[features > 0.2] = 0.2
-        features = normalize_vector(features)
         descriptors.append(features)
     return np.array(descriptors)

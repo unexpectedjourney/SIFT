@@ -18,7 +18,7 @@ def main():
         octave_differences
     )
     print(len(keypoints))
-    get_local_descriptors(keypoints, octave_gaussians, octave_differences)
+    get_local_descriptors(keypoints, octave_gaussians)
 
 
 if __name__ == "__main__":
