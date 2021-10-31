@@ -121,38 +121,56 @@ def fit_parabola(hist, index, width):
     return value
 
 
+def compute_keypoint_hist(image, x, y, bin_width, p=1, bins=36):
+    sigma = p * 1.5
+    width = 2 * int(round(sigma)) + 1
+    if width % 2 == 0:
+        width += 1
+
+    kernel = get_gaussian_kernel(width, width, sigma)
+    hist = np.zeros(bins, dtype=float)
+    for i in range(-width // 2, width // 2 + 1):
+        for j in range(-width // 2, width // 2 + 1):
+            xx = np.clip(x + i, 1, image.shape[0] - 2)
+            yy = np.clip(y + j, 1, image.shape[1] - 2)
+
+            m, theta = get_m_theta(image, xx, yy)
+            weight = kernel[i + width // 2, j + width // 2] * m
+            bin = int(np.floor(theta) // bin_width)
+
+            hist[bin] += weight
+    return hist
+
+
+def extract_keypoints_from_hist(hist, point, bin_width):
+    new_points = []
+    max_bin = np.argmax(hist)
+    max_value = hist[max_bin]
+    new_points.append(np.array([*point, fit_parabola(hist, max_bin, bin_width)]))
+
+    for i, value in enumerate(hist):
+        if .8 * max_value <= value and i != max_bin:
+            new_points.append(np.array([*point, fit_parabola(hist, i, bin_width)]))
+
+    return new_points
+
+
 def get_oriented_keypoints(keypoints, images, differences, bins=36):
     new_points = []
     bin_width = 360 // bins
 
     for point in keypoints:
         x, y, p, o = point
-        sigma = p * 1.5
-        width = 2 * int(round(sigma)) + 1
-        if width % 2 == 0:
-            width += 1
-
-        kernel = get_gaussian_kernel(width, width, sigma)
         image = images[o][p]
-        hist = np.zeros(bins, dtype=float)
-        for i in range(-width // 2, width // 2 + 1):
-            for j in range(-width // 2, width // 2 + 1):
-                xx = np.clip(x + i, 1, image.shape[0] - 2)
-                yy = np.clip(y + j, 1, image.shape[1] - 2)
-
-                m, theta = get_m_theta(image, xx, yy)
-                weight = kernel[i + width // 2, j + width // 2] * m
-                bin = int(np.floor(theta) // bin_width)
-
-                hist[bin] += weight
-        max_bin = np.argmax(hist)
-        max_value = hist[max_bin]
-        new_points.append(np.array([*point, fit_parabola(hist, max_bin, bin_width)]))
-
-        for i, value in enumerate(hist):
-            if .8 * max_value <= value and i != max_bin:
-                new_points.append(np.array([*point, fit_parabola(hist, i, bin_width)]))
-
+        hist = compute_keypoint_hist(
+            image,
+            x,
+            y,
+            bin_width=bin_width,
+            p=p,
+            bins=bins,
+        )
+        new_points.extend(extract_keypoints_from_hist(hist, point, bin_width))
     return np.array(new_points)
 
 

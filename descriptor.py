@@ -1,6 +1,8 @@
 import numpy as np
 import numpy.linalg as la
 
+from blur import get_gaussian_kernel, conv2d
+
 
 def get_m_theta(dx, dy):
     m = np.sqrt(dx ** 2 + dy ** 2)
@@ -47,10 +49,19 @@ def compute_patch(
         angle,
         width=16,
         regions=4,
-        bins=8
+        bins=8,
+        blur=False
 ):
     if not np.min(patch.shape):
         return None
+    if blur:
+        sigma = 1
+        kernel = get_gaussian_kernel(
+            patch.shape[0],
+            patch.shape[1],
+            sigma
+        )
+        patch = conv2d(patch, kernel)
     bin_width = 360 // bins
     features = np.zeros(bins*regions*regions)
     dx = np.gradient(patch, axis=0)
