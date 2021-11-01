@@ -97,7 +97,7 @@ def get_m_theta(image, x, y):
     d_x = image[x_p, y] - image[x_m, y]
     d_y = image[x, y_p] - image[x, y_m]
     m = np.sqrt(d_x ** 2 + d_y ** 2)
-    theta = np.arctan2(d_x, d_y)
+    theta = (np.arctan2(d_x, d_y) + np.pi) * 180 / np.pi
     return m, theta
 
 
@@ -135,8 +135,8 @@ def compute_keypoint_hist(image, x, y, bin_width, p=1, bins=36):
 
             m, theta = get_m_theta(image, xx, yy)
             weight = kernel[i + width // 2, j + width // 2] * m
+            theta = theta % 360
             bin = int(np.floor(theta) // bin_width)
-
             hist[bin] += weight
     return hist
 

@@ -6,7 +6,7 @@ from blur import get_gaussian_kernel, conv2d
 
 def get_m_theta(dx, dy):
     m = np.sqrt(dx ** 2 + dy ** 2)
-    theta = np.arctan2(dx, dy)
+    theta = (np.arctan2(dx, dy) + np.pi) * 180 / np.pi
     return m, theta
 
 
@@ -21,10 +21,10 @@ def get_patch(image, width, x, y):
 
 def get_region_hist(m, theta, bins, bin_width, angle, region):
     hist = np.zeros(bins)
-    center = bin_width / 2
+    center = region / 2
     for i, (magnitude, t) in enumerate(zip(m.flatten(), theta.flatten())):
         t = (360 + t - angle) % 360
-        bin = int(np.floor(t) / bin_width)
+        bin = int(np.floor(t) // bin_width)
         weight = 1 - abs(t - (bin * bin_width + bin_width / 2)) / (bin_width / 2)
         result = magnitude * max(weight, 1e-6)
         x = i // region
