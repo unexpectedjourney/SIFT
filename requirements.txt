@@ -1,1 +1,5 @@
 brown_phototour_revisited
+kornia
+numpy
+opencv-python
+fastprogress

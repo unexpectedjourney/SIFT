@@ -1,7 +1,6 @@
 import numpy as np
 import numpy.linalg as la
 
-from utils import show_points
 from blur import get_gaussian_kernel
 
 
@@ -228,6 +227,4 @@ def find_extremum(difference_octaves, sigma, k, contrast_threshold=0.4, edge_thr
                     keypoint = np.array([*keypoint, octave_number])
                     local_keypoints.append(keypoint)
         keypoints.extend(local_keypoints)
-    show_points(layers, keypoints)
-    print(initial_keypoints, contrast_keypoints, harris_keypoints)
     return keypoints

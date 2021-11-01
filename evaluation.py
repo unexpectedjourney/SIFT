@@ -6,6 +6,7 @@ from brown_phototour_revisited.benchmarking import *
 
 from descriptor import compute_patch
 from keypoints import compute_keypoint_hist, fit_parabola
+from descriptor_matcher import evaluate
 
 
 patch_size = 65
@@ -31,17 +32,17 @@ def extract_sift(patch):
 def apply_first_evaluation():
     model = kornia.feature.SIFTDescriptor(patch_size, rootsift=False).eval()
     results_dict = {}
-    # results_dict['Kornia SIFT'] = full_evaluation(
-    #     model,
-    #     'Kornia SIFT',
-    #     path_to_save_dataset=download_dataset_to,
-    #     path_to_save_descriptors=descs_out_dir,
-    #     path_to_save_mAP=results_dir,
-    #     patch_size=patch_size,
-    #     device=torch.device('cuda:0'),
-    #     distance='euclidean',
-    #     backend='pytorch-cuda'
-    # )
+    results_dict['Kornia SIFT'] = full_evaluation(
+        model,
+        'Kornia SIFT',
+        path_to_save_dataset=download_dataset_to,
+        path_to_save_descriptors=descs_out_dir,
+        path_to_save_mAP=results_dir,
+        patch_size=patch_size,
+        device=torch.device('cuda:0'),
+        distance='euclidean',
+        backend='pytorch-cuda'
+    )
 
     results_dict['SIFT from scratch'] = full_evaluation(
         extract_sift,
@@ -59,7 +60,8 @@ def apply_first_evaluation():
 
 
 def apply_second_evaluation():
-    pass
+    evaluate()
+
 
 if __name__ == "__main__":
     apply_first_evaluation()
