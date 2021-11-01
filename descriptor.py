@@ -52,7 +52,7 @@ def compute_patch(
         bins=8,
         blur=False
 ):
-    if not np.min(patch.shape):
+    if np.min(patch.shape) < 3:
         return None
     if blur:
         sigma = 1
