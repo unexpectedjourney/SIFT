@@ -65,3 +65,4 @@ def apply_second_evaluation():
 
 if __name__ == "__main__":
     apply_first_evaluation()
+    apply_second_evaluation()
